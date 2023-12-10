@@ -1,4 +1,4 @@
-package com.stiliyanv.fraud;
+package com.stiliyanv.clients.fraud;
 
 public record FraudCheckResponse(Boolean isFraudster) {
 }
