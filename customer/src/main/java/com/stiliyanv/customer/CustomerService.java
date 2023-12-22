@@ -2,6 +2,8 @@ package com.stiliyanv.customer;
 
 import com.stiliyanv.clients.fraud.FraudCheckResponse;
 import com.stiliyanv.clients.fraud.FraudClient;
+import com.stiliyanv.clients.notification.NotificationClient;
+import com.stiliyanv.clients.notification.NotificationRequest;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -13,6 +15,7 @@ public class CustomerService {
     private final CustomerRepository customerRepository;
     private final RestTemplate restTemplate;
     private final FraudClient fraudClient;
+    private final NotificationClient notificationClient;
 
     public void registerCustomer(CustomerRegistrationRequest request) {
         Customer customer = Customer.builder()
@@ -20,8 +23,8 @@ public class CustomerService {
                 .lastName(request.lastName())
                 .email(request.email())
                 .build();
-        // todo check if email is valid
-        // todo check if email is not taken
+        // TODO check if email is valid
+        // TODO check if email is not taken
         customerRepository.saveAndFlush(customer);
 
         FraudCheckResponse response =
@@ -31,6 +34,15 @@ public class CustomerService {
             throw new IllegalStateException("Fraudster !!!");
         }
 
-        // todo send notificaiton
+        // TODO make it async, i.e. add to queue
+        notificationClient.sendNotification(
+                new NotificationRequest(
+                        customer.getId(),
+                        customer.getEmail(),
+                        String.format("Hi %s and welcome...",
+                                customer.getFirstName())
+                )
+        );
+
     }
 }
