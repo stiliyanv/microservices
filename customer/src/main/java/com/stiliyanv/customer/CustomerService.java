@@ -1,21 +1,19 @@
 package com.stiliyanv.customer;
 
+import com.stiliyanv.amqp.RabbitMQMessageProducer;
 import com.stiliyanv.clients.fraud.FraudCheckResponse;
 import com.stiliyanv.clients.fraud.FraudClient;
-import com.stiliyanv.clients.notification.NotificationClient;
 import com.stiliyanv.clients.notification.NotificationRequest;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 @Service
 @AllArgsConstructor
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
-    private final RestTemplate restTemplate;
     private final FraudClient fraudClient;
-    private final NotificationClient notificationClient;
+    private final RabbitMQMessageProducer producer;
 
     public void registerCustomer(CustomerRegistrationRequest request) {
         Customer customer = Customer.builder()
@@ -34,15 +32,18 @@ public class CustomerService {
             throw new IllegalStateException("Fraudster !!!");
         }
 
-        // TODO make it async, i.e. add to queue
-        notificationClient.sendNotification(
-                new NotificationRequest(
-                        customer.getId(),
-                        customer.getEmail(),
-                        String.format("Hi %s and welcome...",
-                                customer.getFirstName())
-                )
+        final NotificationRequest notificationRequest = new NotificationRequest(
+                customer.getId(),
+                customer.getEmail(),
+                String.format("Hi %s and welcome...",
+                        customer.getFirstName())
         );
+
+        // async - add it to the queue (rabbitmq)
+        producer.publish(
+                notificationRequest,
+                "internal.exchange",
+                "internal.notification.routing-key");
 
     }
 }
